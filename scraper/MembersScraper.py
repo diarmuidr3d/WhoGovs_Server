@@ -62,14 +62,20 @@ class MembersScraper:
             for each in range(0, len(all_constituencies)):
                 constituency = Constituency(name=all_constituencies[each])
                 constituency.save()
-                organisations = []
-                if len(all_parties) > each:
-                    organisations.append(Party(name=all_parties[each]))
-                organisations.append(House(name=all_houses[each]))
+                # organisations = []
+                # if len(all_parties) > each:
+                #     organisations.append(Party(name=all_parties[each]))
+                # organisations.append(House(name=all_houses[each]))
                 # TODO: Add start / end dates
                 rep_record = RepInConstituency(for_constituency=constituency, representative=representative)
                 rep_record.save()
-                rep_record.for_organisation.add(organisations)
+                if len(all_parties) > each:
+                    party = Party(name=all_parties[each])
+                    party.save()
+                    rep_record.for_organisation.add(party)
+                house = House(name=all_houses[each])
+                house.save()
+                rep_record.for_organisation.add(house)
                 rep_record.save()
             return True
         else:

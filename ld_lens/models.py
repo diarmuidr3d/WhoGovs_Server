@@ -19,7 +19,7 @@ class Person(Contactable):
     person_id = models.IntegerField(primary_key=True)
     born_on = models.DateField(verbose_name='Date of Birth', null=True, blank=True)
     died_on = models.DateField(verbose_name='Date of Death', null=True, blank=True)
-    has_profession = models.ManyToManyField(Profession, null=True, blank=True)
+    has_profession = models.ManyToManyField(Profession, blank=True)
 
 
 class Constituency(models.Model):
@@ -42,7 +42,7 @@ class ConstituencyRecord(models.Model):
 
 class TemporalRecord(models.Model):
     temp_record_id = models.AutoField(primary_key=True)
-    start_date = models.DateField()
+    start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
 
 
@@ -52,7 +52,7 @@ class RepresentativeRecord(models.Model):
 
 
 class RepInConstituency(ConstituencyRecord, TemporalRecord, RepresentativeRecord):
-    for_organisation = models.ManyToManyField(Organisation, null=True, blank=True)
+    for_organisation = models.ManyToManyField(Organisation, blank=True)
 
 
 class ElectionRecord(ConstituencyRecord, models.Model):
