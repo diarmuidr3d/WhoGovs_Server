@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ name }}</title>
+</head>
+<body>
+<h1>{{ name }}</h1>
+{{ born_on }} - {{ died_on }}
+<ul>
+    {% for each in repin %}
+        <li>{{ each.for_constituency.name }} in {{ each.for_organisation.name }}</li>
+    {% endfor %}
+</ul>
+</body>
+</html>
