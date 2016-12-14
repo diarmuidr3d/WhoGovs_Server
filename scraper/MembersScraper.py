@@ -1,11 +1,10 @@
 import re
 import requests
-# from Objects import Representative, RepInConstituency, Constituency, Party, House, Role
 from lxml import html
 from datetime import date as Date, date
 from Scraper import to_str, encode
 
-from ld_lens.models import Person as Representative, RepInConstituency, Constituency, Organisation as Party, Organisation as House, Role
+from ld_lens.models import Person as Representative, RepInConstituency, Constituency, Party, House, Role
 
 dail_members_url = 'http://www.oireachtas.ie/members-hist/default.asp?housetype=0'
 seanad_members_url = 'http://www.oireachtas.ie/members-hist/default.asp?housetype=1'
@@ -62,10 +61,6 @@ class MembersScraper:
             for each in range(0, len(all_constituencies)):
                 constituency = Constituency(name=all_constituencies[each])
                 constituency.save()
-                # organisations = []
-                # if len(all_parties) > each:
-                #     organisations.append(Party(name=all_parties[each]))
-                # organisations.append(House(name=all_houses[each]))
                 # TODO: Add start / end dates
                 rep_record = RepInConstituency(for_constituency=constituency, representative=representative)
                 rep_record.save()

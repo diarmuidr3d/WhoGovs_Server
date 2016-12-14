@@ -4,7 +4,7 @@ from django.db import models
 
 
 class Contactable(models.Model):
-    name = models.CharField(verbose_name='Full Name', max_length=50)
+    name = models.CharField(max_length=100)
     email = models.EmailField(null=True, blank=True)
     facebook = models.CharField(max_length=50, null=True, blank=True)
     twitter = models.CharField(max_length=50, null=True, blank=True)
@@ -26,10 +26,27 @@ class Constituency(models.Model):
     name = models.CharField(max_length=100)
 
 
-class Organisation(models.Model):
-    name = models.CharField(max_length=100)
-    belongs_to = models.ForeignKey('self', null=True, blank=True)
+class TemporalRecord(models.Model):
+    temp_record_id = models.AutoField(primary_key=True)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
 
+
+class Party(Contactable, TemporalRecord):
+    has_preceeding_party = models.ManyToManyField('self')
+
+
+class House(models.Model):
+    name = models.CharField(max_length=100)
+
+
+class HouseSitting(TemporalRecord):
+    number = models.IntegerField()
+    seats = models.IntegerField()
+    belongs_to = models.ForeignKey(House, null=True, blank=True)
+
+    class Meta:
+        unique_together = ('belongs_to', 'number',)
 
 class Election(models.Model):
     date = models.DateField('Date of Election')
@@ -40,19 +57,14 @@ class ConstituencyRecord(models.Model):
     for_constituency = models.ForeignKey(Constituency)
 
 
-class TemporalRecord(models.Model):
-    temp_record_id = models.AutoField(primary_key=True)
-    start_date = models.DateField(null=True, blank=True)
-    end_date = models.DateField(null=True, blank=True)
-
-
 class RepresentativeRecord(models.Model):
     rep_record_id = models.AutoField(primary_key=True)
     representative = models.ForeignKey(Person, on_delete=models.CASCADE)
 
 
 class RepInConstituency(ConstituencyRecord, TemporalRecord, RepresentativeRecord):
-    for_organisation = models.ManyToManyField(Organisation, blank=True)
+    for_party = models.ForeignKey(Party, blank=True)
+    for_house = models.ForeignKey(House)
 
 
 class ElectionRecord(ConstituencyRecord, models.Model):
@@ -83,11 +95,6 @@ class VoteOption(models.Model):
 
 class RepVoted(ProceedingRecord, RepresentativeRecord):
     vote = models.ForeignKey(VoteOption)
-
-
-class Membership(RepresentativeRecord, TemporalRecord):
-    membership_id = models.AutoField(primary_key=True)
-    member_of = models.ForeignKey(Organisation, on_delete=models.CASCADE)
 
 
 class Role(RepresentativeRecord, TemporalRecord):
