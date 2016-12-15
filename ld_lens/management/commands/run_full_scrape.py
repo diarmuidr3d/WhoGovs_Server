@@ -6,6 +6,7 @@ import datetime
 from django.core.management import BaseCommand
 
 from scraper.MembersScraper import MembersScraper
+from scraper.HouseScraper import HouseScraper
 # from scraper.DebatesScraper import DebatesScraper
 # from Objects import MyGraph
 import traceback
@@ -18,7 +19,23 @@ class Command(BaseCommand):
         # parser.add_argument('poll_id', nargs='+', type=int)
 
     def handle(self, *args, **options):
-        scrape_all_members()
+        # scrape_all_members()
+        scrape_all_houses()
+
+def scrape_all_houses():
+    dail_num = 1
+    house_scraper = HouseScraper()
+    #TODO: Autodetect the last sitting, don't rely on these numbers
+    while dail_num < 33:  # Gets the Dail
+        house_scraper.scrape_details(0, dail_num)
+        dail_num += 1
+    seanad_num_first = 1
+    while seanad_num_first < 26: # Next two get the Seanad
+        house_scraper.scrape_details(1, seanad_num_first)
+        seanad_num_first += 1
+    other_seanad_numbers = (1922, 1925, 1928, 1931, 1934)
+    for each in other_seanad_numbers:
+        house_scraper.scrape_details(1, each)
 
 def scrape_all_members():
     # MembersScraper().scrape_details(6)

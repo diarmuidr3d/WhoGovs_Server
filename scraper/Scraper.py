@@ -17,6 +17,7 @@ def to_str(to_convert):
     except UnicodeEncodeError:
         return unicodedata.normalize('NFKD', to_convert).encode('ascii', 'ignore')
 
+
 def to_str_new(to_convert):
     """
     Converts a value from the webpage to a string, accounting for the fact that it may be unicode

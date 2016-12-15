@@ -37,7 +37,8 @@ class Party(Contactable, TemporalRecord):
 
 
 class House(models.Model):
-    name = models.CharField(max_length=100)
+    house_id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=100, unique=True)
 
 
 class HouseSitting(TemporalRecord):
@@ -46,7 +47,7 @@ class HouseSitting(TemporalRecord):
     belongs_to = models.ForeignKey(House, null=True, blank=True)
 
     class Meta:
-        unique_together = ('belongs_to', 'number',)
+        unique_together = ('belongs_to', 'number')
 
 class Election(models.Model):
     date = models.DateField('Date of Election')
