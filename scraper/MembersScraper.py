@@ -1,15 +1,14 @@
 import re
 import requests
 from lxml import html
-from datetime import date as Date, date
-from Scraper import to_str, encode
+from datetime import date
+from string import maketrans
+from Scraper import to_str
 
 from ld_lens.models import Person as Representative, RepInConstituency, Constituency, Party, House, Role, HouseSitting
 
 dail_members_url = 'http://www.oireachtas.ie/members-hist/default.asp?housetype=0'
 seanad_members_url = 'http://www.oireachtas.ie/members-hist/default.asp?housetype=1'
-
-house_instances_selector = "html body div#limiter div#container.container div.row div.col-xs-12 div.row div.col-md-9.col-xs-12.col-md-push-3.column-center2 div.column-center-inner div table tbody tr"
 
 
 class MembersScraper:
@@ -17,7 +16,7 @@ class MembersScraper:
     xpath_name = "//div[@class='memberdetails']/h3/text()"
     xpath_life = "//div[@class='memberdetails']/p[1]/text()"
     xpath_profession = "//h5[text() = 'Profession: ']/span/text()"
-    xpath_party = "//h5[text() = 'Party: ']/span/text()"
+    xpath_party = "//li[span/text() = 'Party']/text()"
     xpath_all_house = "//b[text() = 'House: ']/a/text()"
     xpath_all_constituency = "//li[span/text() = 'Constituency']/a/text()"
     xpath_all_parties = "//li[span/text() = 'Party']/text()"
@@ -50,37 +49,60 @@ class MembersScraper:
             all_sitting_urls = page.xpath(self.xpath_sitting_url)
             # TODO: populate professions into representative
             print(lifetime[0])
-            representative = Representative(person_id=member_id, name=member_name, born_on=lifetime[0], died_on=lifetime[1])
+            representative = Representative(person_id=member_id, name=member_name, born_on=lifetime[0],
+                                            died_on=lifetime[1])
             representative.save()
             if len(all_appointments) > 0:
                 # TODO: Assign these
                 appointments = self.__parse_appointments(html.tostring(all_appointments[0]), representative)
             for each in range(0, len(all_constituencies)):
-                constituency = Constituency(name=all_constituencies[each])
-                constituency.save()
+                if Constituency.objects.filter(name=all_constituencies[each]):
+                    constituency = Constituency.objects.get(name=all_constituencies[each])
+                else:
+                    constituency = Constituency(name=all_constituencies[each])
+                    constituency.save()
                 # TODO: Add start / end dates
-                rep_record = RepInConstituency(for_constituency=constituency, representative=representative)
-                if len(all_parties) > each:
-                    party = Party(name=all_parties[each])
-                    party.save()
-                    rep_record.for_party.add(party)
                 (house_type, house_number) = self.__parse_sitting_urls(all_sitting_urls[each])
                 house = House.objects.get(house_id=house_type)
                 sitting = HouseSitting.objects.get(number=house_number, belongs_to=house)
-                rep_record.for_house_sitting.add(sitting)
-                rep_record.for_organisation.add(house)
+                rep_record = RepInConstituency(for_constituency=constituency, representative=representative,
+                                  for_house_sitting=sitting)
                 rep_record.save()
+                if len(all_parties) > each:
+                    party_name = self.__parse_party_name(all_parties[each])
+                    if Party.objects.filter(name=party_name):
+                        party = Party.objects.get(name=party_name)
+                    else:
+                        party = Party(name=party_name)
+                        party.save()
+                    rep_record.for_party = party
+                    rep_record.save()
             return True
         else:
             print("no data found for id: ", member_id)
             return False
 
-    def __parse_sitting_urls(self, sitting_url):
+    @staticmethod
+    def __parse_party_name(party_name):
+        """
+        :type party_name: str
+        """
+        party_name = to_str(party_name)
+        source_chars = "_"
+        destin_chars = " "
+        table = maketrans(source_chars, destin_chars)
+        party_name = party_name.translate(table, ":")
+        party_name = party_name.strip()
+        return party_name
+
+    @staticmethod
+    def __parse_sitting_urls(sitting_url):
         regex = r'(?:housetype=)(\d*)(?:&HouseNum=)(\d*)'
         split = re.search(regex, sitting_url)
-        return (split.group(1), split.group(2))
+        return split.group(1), split.group(2)
 
-    def __parse_appointments(self, details, representative):
+    @staticmethod
+    def __parse_appointments(details, representative):
         split_app = re.findall(r">[^<]*<", details)
         current_dail = ""
         return_values = {}
@@ -108,25 +130,26 @@ class MembersScraper:
             profession = professions[:index]
             profession.strip()
             professions = professions[index + 1:]
-            retVal = self.__parse_professions(professions)
-            retVal.append(profession)
-            return retVal
+            return_value = self.__parse_professions(professions)
+            return_value.append(profession)
+            return return_value
 
-    def __parse_lifetime(self, lifetime):
+    @staticmethod
+    def __parse_lifetime(lifetime):
         """
         Assuming it's in the form (DD/MM/YYYY - DD/MM/YYYY)
         :type lifetime: str
         """
 
-        def parse_date(date):
-            slash = date.find('/')
-            dayval = date[:slash]
+        def parse_date(date_to_parse):
+            slash = date_to_parse.find('/')
+            dayval = date_to_parse[:slash]
             day = int(dayval)
-            my = date[slash + 1:]
+            my = date_to_parse[slash + 1:]
             secondslash = my.find('/')
             month = int(my[:secondslash])
             year = int(my[secondslash + 1:])
-            return Date(year, month, day)
+            return date(year, month, day)
 
         open_bracket = lifetime.find('(')
         close_bracket = lifetime.find(')')

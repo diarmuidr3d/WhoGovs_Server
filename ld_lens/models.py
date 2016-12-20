@@ -33,6 +33,7 @@ class TemporalRecord(models.Model):
 
 
 class Party(Contactable, TemporalRecord):
+
     has_preceeding_party = models.ManyToManyField('self')
 
 
@@ -65,7 +66,7 @@ class RepresentativeRecord(models.Model):
 
 class RepInConstituency(ConstituencyRecord, TemporalRecord, RepresentativeRecord):
     # This start and end date should only be filled if different to the house sitting
-    for_party = models.ForeignKey(Party)
+    for_party = models.ForeignKey(Party, null=True, blank=True)
     for_house_sitting = models.ForeignKey(HouseSitting)
 
 
