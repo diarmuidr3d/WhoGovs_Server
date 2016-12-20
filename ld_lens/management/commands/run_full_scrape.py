@@ -19,8 +19,8 @@ class Command(BaseCommand):
         # parser.add_argument('poll_id', nargs='+', type=int)
 
     def handle(self, *args, **options):
-        # scrape_all_members()
         scrape_all_houses()
+        scrape_all_members()
 
 def scrape_all_houses():
     dail_num = 1

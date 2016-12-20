@@ -30,12 +30,15 @@ class HouseScraper:
             content = requests.get(url).content
             page = html.fromstring(content)
             house_details = page.xpath(self.xpath_details)
-            sitting = HouseSitting(belongs_to=house, number=house_number)
-            # sitting.save()
-            print("Got " + house.name + " " + str(house_number))
-            self.parse_house_details(house_details, sitting)
+            if house_details:
+                sitting = HouseSitting(belongs_to=house, number=house_number)
+                print("Got " + house.name + " " + str(house_number))
+                self.parse_house_details(house_details, sitting)
+            else:
+                return False
         else:
             print("Already exists for house " + str(house_type) + ", sitting " + str(house_number))
+        return True
 
     def parse_house_details(self, house_details, sitting):
         """

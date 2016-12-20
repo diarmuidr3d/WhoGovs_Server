@@ -4,7 +4,7 @@ from lxml import html
 from datetime import date as Date, date
 from Scraper import to_str, encode
 
-from ld_lens.models import Person as Representative, RepInConstituency, Constituency, Party, House, Role
+from ld_lens.models import Person as Representative, RepInConstituency, Constituency, Party, House, Role, HouseSitting
 
 dail_members_url = 'http://www.oireachtas.ie/members-hist/default.asp?housetype=0'
 seanad_members_url = 'http://www.oireachtas.ie/members-hist/default.asp?housetype=1'
@@ -22,6 +22,7 @@ class MembersScraper:
     xpath_all_constituency = "//li[span/text() = 'Constituency']/a/text()"
     xpath_all_parties = "//li[span/text() = 'Party']/text()"
     xpath_appointments = "/html/body/div/div/div/div[1]/div[2]/div[1]/div/div[1]/div[6]/p[3]"
+    xpath_sitting_url = "//li/b[text() = 'House: ']/a/@href"
 
     # def __init__(self, graph):
     #     self.graph = graph
@@ -43,39 +44,41 @@ class MembersScraper:
                 professions = self.__parse_professions(professions[0])
             else:
                 professions = None
-            # party = page.xpath(self.xpath_party)
-            # if len(party) == 1:
-            #     party = party[0]
-            # else:
-            #     party = None
-            all_houses = page.xpath(self.xpath_all_house)
             all_constituencies = page.xpath(self.xpath_all_constituency)
             all_parties = page.xpath(self.xpath_all_parties)
             all_appointments = page.xpath(self.xpath_appointments)
+            all_sitting_urls = page.xpath(self.xpath_sitting_url)
             # TODO: populate professions into representative
             print(lifetime[0])
             representative = Representative(person_id=member_id, name=member_name, born_on=lifetime[0], died_on=lifetime[1])
             representative.save()
             if len(all_appointments) > 0:
+                # TODO: Assign these
                 appointments = self.__parse_appointments(html.tostring(all_appointments[0]), representative)
             for each in range(0, len(all_constituencies)):
                 constituency = Constituency(name=all_constituencies[each])
                 constituency.save()
                 # TODO: Add start / end dates
                 rep_record = RepInConstituency(for_constituency=constituency, representative=representative)
-                rep_record.save()
                 if len(all_parties) > each:
                     party = Party(name=all_parties[each])
                     party.save()
-                    rep_record.for_organisation.add(party)
-                house = House(name=all_houses[each])
-                house.save()
+                    rep_record.for_party.add(party)
+                (house_type, house_number) = self.__parse_sitting_urls(all_sitting_urls[each])
+                house = House.objects.get(house_id=house_type)
+                sitting = HouseSitting.objects.get(number=house_number, belongs_to=house)
+                rep_record.for_house_sitting.add(sitting)
                 rep_record.for_organisation.add(house)
                 rep_record.save()
             return True
         else:
             print("no data found for id: ", member_id)
             return False
+
+    def __parse_sitting_urls(self, sitting_url):
+        regex = r'(?:housetype=)(\d*)(?:&HouseNum=)(\d*)'
+        split = re.search(regex, sitting_url)
+        return (split.group(1), split.group(2))
 
     def __parse_appointments(self, details, representative):
         split_app = re.findall(r">[^<]*<", details)
