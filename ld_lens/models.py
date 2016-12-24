@@ -1,5 +1,4 @@
 from __future__ import unicode_literals
-
 from django.db import models
 
 
@@ -12,14 +11,18 @@ class Contactable(models.Model):
 
 
 class Profession(models.Model):
-    title = models.CharField(max_length=150)
+    title = models.CharField(max_length=150, unique=True)
 
 
 class Person(Contactable):
     person_id = models.IntegerField(primary_key=True)
     born_on = models.DateField(verbose_name='Date of Birth', null=True, blank=True)
     died_on = models.DateField(verbose_name='Date of Death', null=True, blank=True)
-    has_profession = models.ManyToManyField(Profession, blank=True)
+
+
+class JobForPerson(models.Model):
+    person = models.ForeignKey(Person, related_name="jobs")
+    profession = models.ForeignKey(Profession)
 
 
 class Constituency(models.Model):
@@ -33,7 +36,6 @@ class TemporalRecord(models.Model):
 
 
 class Party(Contactable, TemporalRecord):
-
     has_preceeding_party = models.ManyToManyField('self')
 
 

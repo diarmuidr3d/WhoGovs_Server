@@ -5,7 +5,8 @@ from datetime import date
 from string import maketrans
 from Scraper import to_str
 
-from ld_lens.models import Person as Representative, RepInConstituency, Constituency, Party, House, Role, HouseSitting
+from ld_lens.models import Person as Representative, RepInConstituency, Constituency, Party, House, Role, HouseSitting, \
+    Profession, JobForPerson
 
 dail_members_url = 'http://www.oireachtas.ie/members-hist/default.asp?housetype=0'
 seanad_members_url = 'http://www.oireachtas.ie/members-hist/default.asp?housetype=1'
@@ -38,35 +39,27 @@ class MembersScraper:
                 lifetime = self.__parse_lifetime(lifetime[0])
             else:
                 lifetime = (None, None)
-            professions = page.xpath(self.xpath_profession)
-            if len(professions) == 1:
-                professions = self.__parse_professions(professions[0])
-            else:
-                professions = None
             all_constituencies = page.xpath(self.xpath_all_constituency)
             all_parties = page.xpath(self.xpath_all_parties)
             all_appointments = page.xpath(self.xpath_appointments)
             all_sitting_urls = page.xpath(self.xpath_sitting_url)
-            # TODO: populate professions into representative
             print(lifetime[0])
             representative = Representative(person_id=member_id, name=member_name, born_on=lifetime[0],
                                             died_on=lifetime[1])
             representative.save()
+            self.__add_professions_from_page(representative, page)
             if len(all_appointments) > 0:
                 # TODO: Assign these
                 appointments = self.__parse_appointments(html.tostring(all_appointments[0]), representative)
             for each in range(0, len(all_constituencies)):
-                if Constituency.objects.filter(name=all_constituencies[each]):
-                    constituency = Constituency.objects.get(name=all_constituencies[each])
-                else:
-                    constituency = Constituency(name=all_constituencies[each])
-                    constituency.save()
+                constituency = Constituency.objects.get_or_create(name=all_constituencies[each])[0]
                 # TODO: Add start / end dates
                 (house_type, house_number) = self.__parse_sitting_urls(all_sitting_urls[each])
                 house = House.objects.get(house_id=house_type)
                 sitting = HouseSitting.objects.get(number=house_number, belongs_to=house)
-                rep_record = RepInConstituency(for_constituency=constituency, representative=representative,
-                                  for_house_sitting=sitting)
+                rep_record = RepInConstituency.objects.get_or_create(for_constituency=constituency,
+                                                                     representative=representative,
+                                                                     for_house_sitting=sitting)[0]
                 rep_record.save()
                 if len(all_parties) > each:
                     party_name = self.__parse_party_name(all_parties[each])
@@ -81,6 +74,18 @@ class MembersScraper:
         else:
             print("no data found for id: ", member_id)
             return False
+
+    def __add_professions_from_page(self, representative, page):
+        """
+        Extracts the professions for a Person from their page and adds the relationships / objects as needed
+        :type representative: Person
+        """
+        professions = page.xpath(self.xpath_profession)
+        if len(professions) == 1:
+            professions = self.__parse_professions(professions[0])
+            for each in professions:
+                JobForPerson.objects.get_or_create(person=representative, profession=each)
+        representative.save()
 
     @staticmethod
     def __parse_party_name(party_name):
@@ -125,10 +130,10 @@ class MembersScraper:
     def __parse_professions(self, professions):
         index = professions.find(',')
         if index == -1:
-            return [professions.strip()]
+            return [Profession.objects.get_or_create(title=professions.strip())[0]]
         else:
-            profession = professions[:index]
-            profession.strip()
+            profession_name = professions[:index]
+            profession = Profession.objects.get_or_create(title=profession_name.strip())[0]
             professions = professions[index + 1:]
             return_value = self.__parse_professions(professions)
             return_value.append(profession)
