@@ -102,5 +102,16 @@ class RepVoted(ProceedingRecord, RepresentativeRecord):
     vote = models.ForeignKey(VoteOption)
 
 
-class Role(RepresentativeRecord, TemporalRecord):
-    title = models.CharField(max_length=100)
+class Role(models.Model):
+    title = models.CharField(max_length=100, unique=True)
+
+
+class HouseSittingRole(models.Model):
+    role = models.ForeignKey(Role, related_name='sitting_roles')
+    house_sitting = models.ForeignKey(HouseSitting)
+
+    class Meta:
+        unique_together = ('role', 'house_sitting')
+
+class RepRole(RepresentativeRecord, TemporalRecord):
+    house_sitting_role = models.ForeignKey(HouseSittingRole)

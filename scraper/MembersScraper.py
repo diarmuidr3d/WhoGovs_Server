@@ -6,7 +6,7 @@ from string import maketrans
 from Scraper import to_str
 
 from ld_lens.models import Person as Representative, RepInConstituency, Constituency, Party, House, Role, HouseSitting, \
-    Profession, JobForPerson
+    Profession, JobForPerson, RepRole
 
 dail_members_url = 'http://www.oireachtas.ie/members-hist/default.asp?housetype=0'
 seanad_members_url = 'http://www.oireachtas.ie/members-hist/default.asp?housetype=1'
@@ -21,11 +21,8 @@ class MembersScraper:
     xpath_all_house = "//b[text() = 'House: ']/a/text()"
     xpath_all_constituency = "//li[span/text() = 'Constituency']/a/text()"
     xpath_all_parties = "//li[span/text() = 'Party']/text()"
-    xpath_appointments = "/html/body/div/div/div/div[1]/div[2]/div[1]/div/div[1]/div[6]/p[3]"
+    xpath_appointments = '//h5[text()="Details"]/following-sibling::*[1]/text()'
     xpath_sitting_url = "//li/b[text() = 'House: ']/a/@href"
-
-    # def __init__(self, graph):
-    #     self.graph = graph
 
     def scrape_details(self, member_id):
         content = requests.get(self.members_url + to_str(member_id)).content
@@ -50,7 +47,9 @@ class MembersScraper:
             self.__add_professions_from_page(representative, page)
             if len(all_appointments) > 0:
                 # TODO: Assign these
-                appointments = self.__parse_appointments(html.tostring(all_appointments[0]), representative)
+                print all_appointments
+                appointments = self.__parse_appointments(all_appointments, representative)
+                print appointments
             for each in range(0, len(all_constituencies)):
                 constituency = Constituency.objects.get_or_create(name=all_constituencies[each])[0]
                 # TODO: Add start / end dates
@@ -108,24 +107,31 @@ class MembersScraper:
 
     @staticmethod
     def __parse_appointments(details, representative):
-        split_app = re.findall(r">[^<]*<", details)
-        current_dail = ""
+        # TODO: Finish this method, grab the correct house sitting and then create the roles, etc
+        current_sitting = None
         return_values = {}
-        role_id = 0
-        for each in split_app:
-            trimmed = each.replace('<', '').replace('>', '').strip()
-            if '-' in trimmed:
-                index = trimmed.find('-')
-                if index != -1:
-                    current_dail = trimmed[:index].strip()
-                    trimmed = trimmed[index + 1:].strip()
-            if current_dail not in return_values:
-                return_values[current_dail] = []
-            role = Role(representative=representative, start_date=date(1916, 1, 1), title=trimmed)
-            role.save()
-            return_values[current_dail].append(role)
-            role_id += 1
-        return return_values
+        for each in details:
+            text = to_str(each).strip()
+            if '-' in text:
+                index = text.find('-')
+                sitting_text = text[:index].strip()
+                print sitting_text
+                house_number = re.search(r'[0-9]+', sitting_text).group(0)
+                # house_number = int(sitting_text[:sitting_text.find(' ')].strip())
+                house_name = sitting_text[sitting_text.find(' '):].strip()
+                house = House.objects.get(name=house_name)
+                print sitting_text, " = ", house_number, " - ", house_name
+                current_sitting = HouseSitting.objects.get(number=house_number, belongs_to=house)
+                text = text[index + 1:].strip()
+            elif current_sitting is None:
+                print "** FLAG: The following details could not be parsed: '" + text + "'"
+            if current_sitting not in return_values:
+                return_values[current_sitting] = []
+            print text
+            # rep_role = RepRole(representative=representative, start_date=date(1916, 1, 1), title=text, house_sitting=current_sitting)
+            # rep_role.save()
+            # return_values[current_sitting].append(rep_role)
+        # return return_values
 
     def __parse_professions(self, professions):
         index = professions.find(',')
