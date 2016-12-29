@@ -1,12 +1,12 @@
 import re
 import requests
 from lxml import html
-from datetime import date
+from datetime import date, datetime
 from string import maketrans
 from Scraper import to_str
 
 from ld_lens.models import Person as Representative, RepInConstituency, Constituency, Party, House, Role, HouseSitting, \
-    Profession, JobForPerson, RepRole
+    Profession, JobForPerson, RepRole, HouseSittingRole
 
 dail_members_url = 'http://www.oireachtas.ie/members-hist/default.asp?housetype=0'
 seanad_members_url = 'http://www.oireachtas.ie/members-hist/default.asp?housetype=1'
@@ -107,6 +107,26 @@ class MembersScraper:
 
     @staticmethod
     def __parse_appointments(details, representative):
+        def separate_and_parse_dates(text_for_date):
+            separator_index = date_text.find('to ')
+            length_of_separator = 3
+            if separator_index == -1:
+                separator_index = text_for_date.find('-')
+                length_of_separator = 1
+            if separator_index != -1:
+                start_date_from_text = parse_date(text_for_date[:separator_index].strip())
+                end_date_from_text = parse_date(text_for_date[separator_index + length_of_separator:].strip())
+                return start_date_from_text, end_date_from_text
+            else:
+                print "*** FLAG: Could not parse dates for: " + text + "\n"
+
+        def parse_date(date):
+            """
+            Assuming it's in the form DD Month YYYY
+            :param date: str
+            """
+            print "Date to parse: " + date
+            return datetime.strptime(date, "%d %B %Y")
         # TODO: Finish this method, grab the correct house sitting and then create the roles, etc
         current_sitting = None
         return_values = {}
@@ -115,23 +135,47 @@ class MembersScraper:
             if '-' in text:
                 index = text.find('-')
                 sitting_text = text[:index].strip()
-                print sitting_text
                 house_number = re.search(r'[0-9]+', sitting_text).group(0)
-                # house_number = int(sitting_text[:sitting_text.find(' ')].strip())
                 house_name = sitting_text[sitting_text.find(' '):].strip()
                 house = House.objects.get(name=house_name)
-                print sitting_text, " = ", house_number, " - ", house_name
                 current_sitting = HouseSitting.objects.get(number=house_number, belongs_to=house)
-                text = text[index + 1:].strip()
+                bracket_index = text.find('[')
+                start_date = None
+                end_date = None
+                start_date_2 = None
+                end_date_2 = None
+                if bracket_index != -1:
+                    date_text = text[bracket_index+1:text.find(']')]
+                    print "Date text: " + date_text
+                    text = text[index + 1:bracket_index].strip()
+                    index_of_and = date_text.find(" and ")
+                    if index_of_and is not -1:  # parse extra dates where they're separated by "and"
+                        date_text_2 = date_text[index_of_and+5:].strip()
+                        date_text = date_text[:index_of_and].strip()
+                        start_date_2, end_date_2 = separate_and_parse_dates(date_text_2)
+                    parsed_dates = separate_and_parse_dates(date_text)
+                    if parsed_dates is not None:
+                        start_date, end_date = parsed_dates
+                else:
+                    text = text[index + 1:].strip()
+                    start_date = current_sitting.start_date
+                    end_date = current_sitting.end_date
+                print text
+                print "Start: " + str(start_date) + " end: " + str(end_date)
+                role = Role.objects.get_or_create(title=text)[0]
+                hsr = HouseSittingRole.objects.get_or_create(role=role, house_sitting=current_sitting)[0]
+                rep_role = RepRole.objects.get_or_create(representative=representative, start_date=start_date,
+                                                         end_date=end_date, house_sitting_role=hsr)[0]
+                if current_sitting not in return_values:
+                    return_values[current_sitting] = []
+                return_values[current_sitting].append(rep_role)
+                if start_date_2 is not None:
+                    rep_role_2 = RepRole.objects.get_or_create(representative=representative, start_date=start_date_2,
+                                                               end_date=end_date_2, house_sitting_role=hsr)[0]
+                    return_values[current_sitting].append(rep_role_2)
             elif current_sitting is None:
                 print "** FLAG: The following details could not be parsed: '" + text + "'"
-            if current_sitting not in return_values:
-                return_values[current_sitting] = []
-            print text
-            # rep_role = RepRole(representative=representative, start_date=date(1916, 1, 1), title=text, house_sitting=current_sitting)
-            # rep_role.save()
-            # return_values[current_sitting].append(rep_role)
-        # return return_values
+        return return_values
 
     def __parse_professions(self, professions):
         index = professions.find(',')
