@@ -9,6 +9,9 @@ class Contactable(models.Model):
     twitter = models.CharField(max_length=50, null=True, blank=True)
     website = models.CharField(max_length=100, null=True, blank=True)
 
+    class Meta:
+        abstract = True
+
 
 class Profession(models.Model):
     title = models.CharField(max_length=150, unique=True)
@@ -30,9 +33,12 @@ class Constituency(models.Model):
 
 
 class TemporalRecord(models.Model):
-    temp_record_id = models.AutoField(primary_key=True)
+    # temp_record_id = models.AutoField(primary_key=True)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
+
+    class Meta:
+        abstract = True
 
 
 class Party(Contactable, TemporalRecord):
@@ -52,18 +58,25 @@ class HouseSitting(TemporalRecord):
     class Meta:
         unique_together = ('belongs_to', 'number')
 
+
 class Election(models.Model):
     date = models.DateField('Date of Election')
 
 
 class ConstituencyRecord(models.Model):
-    constituency_record_id = models.AutoField(primary_key=True)
+    # constituency_record_id = models.AutoField(primary_key=True)
     for_constituency = models.ForeignKey(Constituency)
+
+    class Meta:
+        abstract = True
 
 
 class RepresentativeRecord(models.Model):
-    rep_record_id = models.AutoField(primary_key=True)
+    # rep_record_id = models.AutoField(primary_key=True)
     representative = models.ForeignKey(Person, on_delete=models.CASCADE)
+
+    class Meta:
+        abstract = True
 
 
 class RepInConstituency(ConstituencyRecord, TemporalRecord, RepresentativeRecord):
@@ -72,7 +85,7 @@ class RepInConstituency(ConstituencyRecord, TemporalRecord, RepresentativeRecord
     for_house_sitting = models.ForeignKey(HouseSitting)
 
 
-class ElectionRecord(ConstituencyRecord, models.Model):
+class ElectionRecord(ConstituencyRecord):
     part_of = models.ForeignKey(Election)
     for_candidate = models.ForeignKey(RepInConstituency)
 
@@ -83,6 +96,9 @@ class Proceeding(TemporalRecord):
 
 class ProceedingRecord(models.Model):
     in_proceeding = models.ForeignKey(Proceeding, on_delete=models.CASCADE)
+
+    class Meta:
+        abstract = True
 
 
 class RepSpoke(ProceedingRecord, RepresentativeRecord):
@@ -113,5 +129,9 @@ class HouseSittingRole(models.Model):
     class Meta:
         unique_together = ('role', 'house_sitting')
 
+
 class RepRole(RepresentativeRecord, TemporalRecord):
     house_sitting_role = models.ForeignKey(HouseSittingRole)
+
+    class Meta:
+        unique_together = ('house_sitting_role', 'representative', 'start_date', 'end_date')
