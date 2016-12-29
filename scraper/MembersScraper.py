@@ -48,8 +48,7 @@ class MembersScraper:
             if len(all_appointments) > 0:
                 # TODO: Assign these
                 print all_appointments
-                appointments = self.__parse_appointments(all_appointments, representative)
-                print appointments
+                self.__parse_roles(all_appointments, representative)
             for each in range(0, len(all_constituencies)):
                 constituency = Constituency.objects.get_or_create(name=all_constituencies[each])[0]
                 # TODO: Add start / end dates
@@ -106,7 +105,7 @@ class MembersScraper:
         return split.group(1), split.group(2)
 
     @staticmethod
-    def __parse_appointments(details, representative):
+    def __parse_roles(details, representative):
         def create_rep_role(role_title, role_start_date, role_end_date, role_representative, role_sitting):
             role = Role.objects.get_or_create(title=role_title)[0]
             hsr = HouseSittingRole.objects.get_or_create(role=role, house_sitting=role_sitting)[0]
@@ -114,19 +113,18 @@ class MembersScraper:
                                                      end_date=role_end_date, house_sitting_role=hsr)[0]
             rep_role.save()
         current_sitting = None
-        for each in details:
+        for each in details: #for each line in the details list
             text = to_str(each).strip()
-            if '-' in text:
-                index = text.find('-')
-                sitting_text = text[:index].strip()
-                house_number = re.search(r'[0-9]+', sitting_text).group(0)
-                house_name = sitting_text[sitting_text.find(' '):].strip()
+            title_search = re.search(r"^(\d{1,2})\w{2}\s(\w{4,6})\s*-\s*([^\[]*)", text) #Grab the sitting and title
+            if title_search:
+                house_number = title_search.group(1)
+                house_name = title_search.group(2)
+                title = title_search.group(3).strip()
                 house = House.objects.get(name=house_name)
                 current_sitting = HouseSitting.objects.get(number=house_number, belongs_to=house)
                 bracket_index = text.find('[')
                 if bracket_index != -1:
                     date_text = text[bracket_index+1:text.find(']')]
-                    text = text[index + 1:bracket_index].strip()
                     dates_found = re.findall(r"\d{1,2}\s\w{3,9}\s\d{4}", date_text)
                     if len(dates_found) is not 0:
                         if len(dates_found) % 2 is 1:
@@ -134,7 +132,7 @@ class MembersScraper:
                         for each_index in range(0, len(dates_found), 2):
                             start_date = datetime.strptime(dates_found[each_index], "%d %B %Y")
                             end_date = datetime.strptime(dates_found[each_index + 1], "%d %B %Y")
-                            create_rep_role(text, start_date, end_date, representative, current_sitting)
+                            create_rep_role(title, start_date, end_date, representative, current_sitting)
                     else:
                         print "**FLAG 1.2: No dates found in " + date_text
             elif current_sitting is None:
