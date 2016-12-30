@@ -46,12 +46,10 @@ class MembersScraper:
             representative.save()
             self.__add_professions_from_page(representative, page)
             if len(all_appointments) > 0:
-                # TODO: Assign these
-                print all_appointments
                 self.__parse_roles(all_appointments, representative)
             for each in range(0, len(all_constituencies)):
                 constituency = Constituency.objects.get_or_create(name=all_constituencies[each])[0]
-                # TODO: Add start / end dates
+                # TODO: Add start / end dates for TDs who were elected / removed mid-term
                 (house_type, house_number) = self.__parse_sitting_urls(all_sitting_urls[each])
                 house = House.objects.get(house_id=house_type)
                 sitting = HouseSitting.objects.get(number=house_number, belongs_to=house)
@@ -106,16 +104,34 @@ class MembersScraper:
 
     @staticmethod
     def __parse_roles(details, representative):
+        """
+        Parses the roles listed in the "Details" section of the Representative page
+        :param details: The list of text from the Details Section eg: ['1st Dail - Title 1', '2nd Dail - Title 2']
+        :param representative: The Representative who held these Roles
+        :return: None
+        """
+
         def create_rep_role(role_title, role_start_date, role_end_date, role_representative, role_sitting):
+            """
+            Creates (or gets if already existing) the Role, HouseSittingRole and RepRole for the inputs
+            This method was created to avoid duplication of code
+            :param role_title: String containing the title of the Role
+            :param role_start_date: The start date for which the Representative held the role
+            :param role_end_date: The end date for which the Representative held the role
+            :param role_representative: The Representative who held the Role
+            :param role_sitting: The HouseSitting for which the Representative held this role
+            :return: None
+            """
             role = Role.objects.get_or_create(title=role_title)[0]
             hsr = HouseSittingRole.objects.get_or_create(role=role, house_sitting=role_sitting)[0]
             rep_role = RepRole.objects.get_or_create(representative=role_representative, start_date=role_start_date,
                                                      end_date=role_end_date, house_sitting_role=hsr)[0]
             rep_role.save()
+
         current_sitting = None
-        for each in details: #for each line in the details list
+        for each in details:  # for each line in the details list
             text = to_str(each).strip()
-            title_search = re.search(r"^(\d{1,2})\w{2}\s(\w{4,6})\s*-\s*([^\[]*)", text) #Grab the sitting and title
+            title_search = re.search(r"^(\d{1,2})\w{2}\s(\w{4,6})\s*-\s*([^\[]*)", text)  # Grab the sitting and title
             if title_search:
                 house_number = title_search.group(1)
                 house_name = title_search.group(2)
@@ -124,12 +140,13 @@ class MembersScraper:
                 current_sitting = HouseSitting.objects.get(number=house_number, belongs_to=house)
                 bracket_index = text.find('[')
                 if bracket_index != -1:
-                    date_text = text[bracket_index+1:text.find(']')]
-                    dates_found = re.findall(r"\d{1,2}\s\w{3,9}\s\d{4}", date_text)
+                    date_text = text[bracket_index + 1:text.find(']')]  # Extract the date of the roles from the title
+                    dates_found = re.findall(r"\d{1,2}\s\w{3,9}\s\d{4}", date_text)  # Find dates within the date text
                     if len(dates_found) is not 0:
                         if len(dates_found) % 2 is 1:
                             print "**FLAG 1.1: Uneven number of dates returned"
                         for each_index in range(0, len(dates_found), 2):
+                            # Step in twos as dates alternate between start and end eg: Start, End, Start 2, End 2
                             start_date = datetime.strptime(dates_found[each_index], "%d %B %Y")
                             end_date = datetime.strptime(dates_found[each_index + 1], "%d %B %Y")
                             create_rep_role(title, start_date, end_date, representative, current_sitting)
