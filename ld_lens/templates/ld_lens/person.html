@@ -9,7 +9,7 @@
 {{ born_on }} - {{ died_on }}
 <ul>
     {% for each in repin %}
-        <li>{{ each.for_constituency.name }} in {{ each.for_party.name }}</li>
+        <li><a href="{% url 'constituency' each.for_constituency.name %}">{{ each.for_constituency.name }}</a> in {{ each.for_party.name }}</li>
     {% endfor %}
 </ul>
 </body>
