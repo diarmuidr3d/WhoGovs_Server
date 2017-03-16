@@ -5,8 +5,8 @@ from datetime import date, datetime
 from string import maketrans
 from Scraper import to_str
 
-from ld_lens.models import Person as Representative, RepInConstituency, Constituency, Party, House, Role, HouseSitting, \
-    Profession, JobForPerson, RepRole, HouseSittingRole
+from ld_lens.models import Person as Representative, RepInConstituency, Constituency, Party, House, Role,\
+    HouseSitting, Profession, JobForPerson, RepRole, HouseSittingRole
 
 dail_members_url = 'http://www.oireachtas.ie/members-hist/default.asp?housetype=0'
 seanad_members_url = 'http://www.oireachtas.ie/members-hist/default.asp?housetype=1'
@@ -21,8 +21,10 @@ class MembersScraper:
     xpath_all_house = "//b[text() = 'House: ']/a/text()"
     xpath_all_constituency = "//li[span/text() = 'Constituency']/a/text()"
     xpath_all_parties = "//li[span/text() = 'Party']/text()"
-    xpath_appointments = '//h5[text()="Details"]/following-sibling::*[1]/text()'
+    xpath_roles = '//h5[text()="Details"]/following-sibling::*[1]/text()'
     xpath_sitting_url = "//li/b[text() = 'House: ']/a/@href"
+    xpath_email = "//a[contains(@href, 'mailto:')]/text()"
+    xpath_contact = "//h5[text()='Address']/following-sibling::*[1]"
 
     def scrape_details(self, member_id):
         content = requests.get(self.members_url + to_str(member_id)).content
@@ -38,11 +40,11 @@ class MembersScraper:
                 lifetime = (None, None)
             all_constituencies = page.xpath(self.xpath_all_constituency)
             all_parties = page.xpath(self.xpath_all_parties)
-            all_appointments = page.xpath(self.xpath_appointments)
+            all_appointments = page.xpath(self.xpath_roles)
             all_sitting_urls = page.xpath(self.xpath_sitting_url)
-            print(lifetime[0])
+            (address, email, phone,  website) = self.__parse_contact_details(page)
             representative = Representative(person_id=member_id, name=member_name, born_on=lifetime[0],
-                                            died_on=lifetime[1])
+                                            died_on=lifetime[1], email=email, website=website, postal_address=address)
             representative.save()
             self.__add_professions_from_page(representative, page)
             if len(all_appointments) > 0:
@@ -70,6 +72,34 @@ class MembersScraper:
         else:
             print("no data found for id: ", member_id)
             return False
+
+    def __parse_contact_details(self, page):
+        contact_details = page.xpath(self.xpath_contact)
+        address = ""
+        website = None
+        email = None
+        phone = None
+        if contact_details:
+            text = contact_details[0].text_content().split("\r\n")
+            if len(text) is not 0:
+                for each in text:
+                    line = each.strip()
+                    print(line)
+                    search = re.search("^([WTE]:)(.*)$", line)
+                    if search is not None:
+                        print(search.group(0), search.group(1), search.group(2))
+                    if search is None:
+                        address += ", " + line
+                    elif search.group(1) == "W:": #Website
+                        website = search.group(2).strip()
+                    elif search.group(1) == "T:": #Phone
+                        phone = search.group(2).strip()
+                    elif search.group(1) == "E:": #email
+                        email = search.group(2).strip()
+        if address == "":
+            address = None
+        return address, email, phone, website
+
 
     def __add_professions_from_page(self, representative, page):
         """
@@ -145,11 +175,12 @@ class MembersScraper:
                     if len(dates_found) is not 0:
                         if len(dates_found) % 2 is 1:
                             print "**FLAG 1.1: Uneven number of dates returned"
-                        for each_index in range(0, len(dates_found), 2):
-                            # Step in twos as dates alternate between start and end eg: Start, End, Start 2, End 2
-                            start_date = datetime.strptime(dates_found[each_index], "%d %B %Y")
-                            end_date = datetime.strptime(dates_found[each_index + 1], "%d %B %Y")
-                            create_rep_role(title, start_date, end_date, representative, current_sitting)
+                        else:
+                            for each_index in range(0, len(dates_found), 2):
+                                # Step in twos as dates alternate between start and end eg: Start, End, Start 2, End 2
+                                start_date = datetime.strptime(dates_found[each_index], "%d %B %Y")
+                                end_date = datetime.strptime(dates_found[each_index + 1], "%d %B %Y")
+                                create_rep_role(title, start_date, end_date, representative, current_sitting)
                     else:
                         print "**FLAG 1.2: No dates found in " + date_text
             elif current_sitting is None:

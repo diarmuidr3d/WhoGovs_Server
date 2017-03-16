@@ -8,6 +8,7 @@ class Contactable(models.Model):
     facebook = models.CharField(max_length=50, null=True, blank=True)
     twitter = models.CharField(max_length=50, null=True, blank=True)
     website = models.CharField(max_length=100, null=True, blank=True)
+    postal_address = models.CharField(max_length=150, null=True, blank=True)
 
     class Meta:
         abstract = True
