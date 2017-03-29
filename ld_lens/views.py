@@ -16,6 +16,7 @@ def person(request, person_id):
         'name': str(person.name),
         'born_on': person.born_on,
         'died_on': person.died_on,
+        'person': person,
         'repin': RepInConstituency.objects.filter(representative=person)
     }
     return HttpResponse(template.render(context, request))

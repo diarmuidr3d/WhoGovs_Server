@@ -6,7 +6,12 @@
 </head>
 <body>
 <h1>{{ name }}</h1>
-{{ born_on }} - {{ died_on }}
+{{ born_on }} - {{ died_on }}<br />
+email: {{ person.email }}<br />
+facebook: {{ person.facebook }}<br />
+twitter: {{ person.twitter }}<br />
+website: <a href="http://{{ person.website }}">link</a>
+address: {{ person.postal_address }}
 <ul>
     {% for each in repin %}
         <li><a href="{% url 'constituency' each.for_constituency.name %}">{{ each.for_constituency.name }}</a> in {{ each.for_party.name }}</li>
