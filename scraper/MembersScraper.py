@@ -174,7 +174,7 @@ class MembersScraper:
                     dates_found = re.findall(r"\d{1,2}\s\w{3,9}\s\d{4}", date_text)  # Find dates within the date text
                     if len(dates_found) is not 0:
                         if len(dates_found) % 2 is 1:
-                            print "**FLAG 1.1: Uneven number of dates returned"
+                            print("**FLAG 1.1: Uneven number of dates returned")
                         else:
                             for each_index in range(0, len(dates_found), 2):
                                 # Step in twos as dates alternate between start and end eg: Start, End, Start 2, End 2
@@ -182,9 +182,9 @@ class MembersScraper:
                                 end_date = datetime.strptime(dates_found[each_index + 1], "%d %B %Y")
                                 create_rep_role(title, start_date, end_date, representative, current_sitting)
                     else:
-                        print "**FLAG 1.2: No dates found in " + date_text
+                        print("**FLAG 1.2: No dates found in " + date_text)
             elif current_sitting is None:
-                print "** FLAG 1.3: The following details could not be parsed: '" + text + "'"
+                print("** FLAG 1.3: The following details could not be parsed: '" + text + "'")
 
     def __parse_professions(self, professions):
         index = professions.find(',')
