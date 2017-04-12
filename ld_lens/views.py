@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.template import loader
 
-from ld_lens.models import Person, RepInConstituency, Constituency
+from ld_lens.models import Person, RepInConstituency, Constituency, Party
 
 
 def index(request):
@@ -29,5 +29,17 @@ def constituency(request, name):
     context = {
         'name': name,
         'reps_in': reps_in
+    }
+    return HttpResponse(template.render(context, request))
+
+
+def party(request, name):
+    template = loader.get_template('ld_lens/party.html')
+    this_party = Party.objects.get(name=name)
+    print(this_party.repinconstituency_set.all())
+    context = {
+        'name': this_party.name,
+        'preceeding_party': this_party.has_preceeding_party.name,
+        'representatives':  Person.objects.filter(repinconstituency__for_party=this_party).distinct()
     }
     return HttpResponse(template.render(context, request))

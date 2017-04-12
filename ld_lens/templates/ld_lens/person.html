@@ -14,7 +14,7 @@ website: <a href="http://{{ person.website }}">link</a><br />
 address: {{ person.postal_address }}
 <ul>
     {% for each in repin %}
-        <li><a href="{% url 'constituency' each.for_constituency.name %}">{{ each.for_constituency.name }}</a> in {{ each.for_party.name }}</li>
+        <li><a href="{% url 'constituency' each.for_constituency.name %}">{{ each.for_constituency.name }}</a> in <a href="{% url 'party' each.for_party.name %}">{{ each.for_party.name }}</a></li>
     {% endfor %}
 </ul>
 </body>

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ name }}</title>
+</head>
+<body>
+    <h1>{{ name }}</h1>
+    Preceeding Party: <a href="{% url 'party' preceeding_party %}">{{ preceeding_party }}</a>
+    <h2>Members</h2>
+    <ul>
+        {% for each in representatives %}
+            <li><a href="{% url 'representative' each.person_id %}" >{{ each.name }}</a></li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
