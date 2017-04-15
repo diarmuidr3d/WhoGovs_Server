@@ -14,7 +14,10 @@ website: <a href="http://{{ person.website }}">link</a><br />
 address: {{ person.postal_address }}
 <ul>
     {% for each in repin %}
-        <li><a href="{% url 'constituency' each.for_constituency.name %}">{{ each.for_constituency.name }}</a> in <a href="{% url 'party' each.for_party.name %}">{{ each.for_party.name }}</a></li>
+        <li>
+            <a href="{% url 'constituency' each.for_constituency.name %}">{{ each.for_constituency.name }}</a> in <a href="{% url 'party' each.for_party.name %}">{{ each.for_party.name }}</a><br />
+            <p>{{ each.for_house_sitting.start_date }} - {{ each.for_house_sitting.end_date }}</p>
+        </li>
     {% endfor %}
 </ul>
 </body>
