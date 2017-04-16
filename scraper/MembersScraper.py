@@ -106,7 +106,7 @@ class MembersScraper:
         """
         professions = page.xpath(self.xpath_profession)
         if len(professions) == 1:
-            professions = self.__parse_professions(professions[0])
+            professions = self.parse_professions(professions[0])
             for each in professions:
                 JobForPerson.objects.get_or_create(person=representative, profession=each)
         representative.save()
@@ -185,7 +185,8 @@ class MembersScraper:
             elif current_sitting is None:
                 print("** FLAG 1.3: The following details could not be parsed: '" + text + "'")
 
-    def __parse_professions(self, professions):
+    @staticmethod
+    def parse_professions(professions):
         index = professions.find(',')
         if index == -1:
             return [Profession.objects.get_or_create(title=professions.strip())[0]]
@@ -193,7 +194,7 @@ class MembersScraper:
             profession_name = professions[:index]
             profession = Profession.objects.get_or_create(title=profession_name.strip())[0]
             professions = professions[index + 1:]
-            return_value = self.__parse_professions(professions)
+            return_value = MembersScraper.parse_professions(professions)
             return_value.append(profession)
             return return_value
 
