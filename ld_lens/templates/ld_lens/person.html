@@ -12,13 +12,20 @@ facebook: {{ person.facebook }}<br />
 twitter: {{ person.twitter }}<br />
 website: <a href="http://{{ person.website }}">link</a><br />
 address: {{ person.postal_address }}
+<h2>Elected:</h2>
 <ul>
     {% for each in repin %}
         <li>
             <a href="{% url 'constituency' each.for_constituency.name %}">{{ each.for_constituency.name }}</a> in <a href="{% url 'party' each.for_party.name %}">{{ each.for_party.name }}</a><br />
-            <p>{{ each.for_house_sitting.start_date }} - {{ each.for_house_sitting.end_date }}</p>
+            <p>{{ each.start_date|default:each.for_house_sitting.start_date }} - {{ each.end_date|default:each.for_house_sitting.end_date }}</p>
         </li>
     {% endfor %}
+</ul>
+<h2>Jobs:</h2>
+<ul>
+{% for each in jobs %}
+    <li>{{ each.profession.title }}</li>
+{% endfor %}
 </ul>
 </body>
 </html>

@@ -17,7 +17,8 @@ def person(request, person_id):
         'born_on': person.born_on,
         'died_on': person.died_on,
         'person': person,
-        'repin': RepInConstituency.objects.filter(representative=person)
+        'repin': RepInConstituency.objects.filter(representative=person),
+        'jobs': person.jobs.all()
     }
     return HttpResponse(template.render(context, request))
 
