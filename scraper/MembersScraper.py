@@ -34,7 +34,7 @@ class MembersScraper:
             member_name = member_name[0]
             lifetime = page.xpath(self.xpath_life)
             if len(lifetime) == 1:
-                lifetime = self.__parse_lifetime(lifetime[0])
+                lifetime = self.parse_lifetime(lifetime[0])
             else:
                 lifetime = (None, None)
             all_constituencies = page.xpath(self.xpath_all_constituency)
@@ -198,7 +198,7 @@ class MembersScraper:
             return return_value
 
     @staticmethod
-    def __parse_lifetime(lifetime):
+    def parse_lifetime(lifetime):
         """
         Assuming it's in the form (DD/MM/YYYY - DD/MM/YYYY)
         :type lifetime: str
