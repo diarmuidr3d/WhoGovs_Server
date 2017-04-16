@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.template import loader
 
-from ld_lens.models import Person, RepInConstituency, Constituency, Party
+from ld_lens.models import Person, RepInConstituency, Constituency, Party, RepSpoke
 
 
 def index(request):
@@ -18,7 +18,8 @@ def person(request, person_id):
         'died_on': person.died_on,
         'person': person,
         'repin': RepInConstituency.objects.filter(representative=person),
-        'jobs': person.jobs.all()
+        'jobs': person.jobs.all(),
+        'speakings': RepSpoke.objects.filter(representative=person)
     }
     return HttpResponse(template.render(context, request))
 
