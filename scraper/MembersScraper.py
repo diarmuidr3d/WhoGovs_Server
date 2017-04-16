@@ -2,8 +2,7 @@ import re
 import requests
 from lxml import html
 from datetime import date, datetime
-from string import maketrans
-from Scraper import to_str
+from scraper.Scraper import to_str
 
 from ld_lens.models import Person as Representative, RepInConstituency, Constituency, Party, House, Role,\
     HouseSitting, Profession, JobForPerson, RepRole, HouseSittingRole
@@ -90,16 +89,15 @@ class MembersScraper:
                         print(search.group(0), search.group(1), search.group(2))
                     if search is None:
                         address += ", " + line
-                    elif search.group(1) == "W:": #Website
+                    elif search.group(1) == "W:":  # Website
                         website = search.group(2).strip()
-                    elif search.group(1) == "T:": #Phone
+                    elif search.group(1) == "T:":  # Phone
                         phone = search.group(2).strip()
-                    elif search.group(1) == "E:": #email
+                    elif search.group(1) == "E:":  # email
                         email = search.group(2).strip()
         if address == "":
             address = None
         return address, email, phone, website
-
 
     def __add_professions_from_page(self, representative, page):
         """
@@ -119,10 +117,11 @@ class MembersScraper:
         :type party_name: str
         """
         party_name = to_str(party_name)
-        source_chars = "_"
-        destin_chars = " "
-        table = maketrans(source_chars, destin_chars)
-        party_name = party_name.translate(table, ":")
+        # source_chars = "_"
+        # destin_chars = " "
+        # table = maketrans(source_chars, destin_chars)
+        # party_name = party_name.translate(table, ":")
+        party_name = party_name.replace("_", " ")
         party_name = party_name.strip()
         return party_name
 
