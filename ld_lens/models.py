@@ -24,11 +24,6 @@ class Person(Contactable):
     died_on = models.DateField(verbose_name='Date of Death', null=True, blank=True)
 
 
-class JobForPerson(models.Model):
-    person = models.ForeignKey(Person, related_name="jobs")
-    profession = models.ForeignKey(Profession)
-
-
 class Constituency(models.Model):
     name = models.CharField(max_length=100)
 
@@ -40,6 +35,11 @@ class TemporalRecord(models.Model):
 
     class Meta:
         abstract = True
+
+
+class JobForPerson(TemporalRecord):
+    person = models.ForeignKey(Person, related_name="jobs")
+    profession = models.ForeignKey(Profession)
 
 
 class Party(Contactable, TemporalRecord):
